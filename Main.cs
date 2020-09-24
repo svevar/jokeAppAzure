@@ -13,6 +13,12 @@ namespace JokeApp
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
             APIController JokeAPI = new APIController();
             log.LogInformation($"API URL is: {JokeAPI.APIURL}");
+
+            // Kjør metoden for å gjøre spørring til APIet
+            var joke = JokeAPI.GETRandomJoke();
+            log.LogInformation($"Her kommer en vits!");
+            log.LogInformation($"{joke.Setup}");
+            log.LogInformation($"{joke.Punchline}");
         }
     }
 }
