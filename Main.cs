@@ -10,7 +10,7 @@ namespace JokeApp
     public static class Main
     {
         [FunctionName("Function1")]
-        public static void Run([TimerTrigger("0 */1 * * * *")]TimerInfo myTimer, ILogger log)
+        public static void Run([TimerTrigger("0 0 9 * * *")] TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
             APIController JokeAPI = new APIController();
@@ -22,20 +22,21 @@ namespace JokeApp
             Boolean acceptedJoke = false;
             int retries = 0;
             int maxRetry = 10;
-            while (!acceptedJoke && retries < maxRetry)
+            while (!acceptedJoke)
             {
                 // Kjør metoden for å gjøre spørring til APIet
                 // JokeAPI.GETRandomJoke();
                 joke = JokeAPI.GETRandomJoke();
                 acceptedJoke = joke.ValidateJoke();
-                retries += 1;
+            
+            if (retries > maxRetry)
+            {
+                // Hvis vi bruker mer enn maxRetry forsøk på å finne en godkjent vits avslutter vi kjøringen
+                log.LogInformation($"After {maxRetry} subsequent tries, function couldn't retrieve a joke that passed validation.");
+                return;
             }
-            //if (!acceptedJoke)
-            //{
-            //    // Hvis vi bruker mer enn maxRetry forsøk på å finne en godkjent vits avslutter vi kjøringen
-            //    log.LogInformation($"After {maxRetry} subsequent tries, function couldn't retrieve a joke that passed validation.");
-            //    return;
-            //}
+            retries += 1;
+        }
 
             // Logger ut vitsen til konsoll:
             log.LogInformation($"Her kommer en vits!");
@@ -50,10 +51,16 @@ namespace JokeApp
             using (var con = new SqlConnection(ConnectionString))
             {
                 con.Open();
+                var exists = con.ExecuteScalar<bool>("select count(distinct 1) from Jokes2 where Id=@id", joke);
 
-            // Definerer spørringen vår og kjører denne
-            con.Execute("insert into Jokes2 (Id, JokeType, Setup, Punchline) values (@Id, @Type, @Setup, @Punchline)",
-                joke);
+                // If any jokes with the same JokeId exists in the API, we don't insert anything to the db
+                if (!exists)
+                { 
+                    
+                    // Definerer spørringen vår og kjører denne
+                    con.Execute("insert into Jokes2 (Id, JokeType, Setup, Punchline) values (@Id, @Type, @Setup, @Punchline)",
+                        joke);
+                }
             }
         }
     }
